@@ -4,22 +4,20 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
 
-	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/docker/go-plugins-helpers/volume"
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/openstack/blockstorage/v3/volumes"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/volumeattach"
 	"github.com/gophercloud/gophercloud/pagination"
@@ -46,20 +44,37 @@ func newPlugin(provider *gophercloud.ProviderClient, endpointOpts gophercloud.En
 	}
 
 	if len(config.MachineID) == 0 {
-		bytes, err := ioutil.ReadFile("/etc/machine-id")
-		if err != nil {
-			log.WithError(err).Error("Error reading machine id")
-			return nil, err
+		// Find machine ID from Openstack servers
+
+        hostname, err := os.Hostname()
+	    if err != nil {
+		    panic(err)
+	    }
+
+        listOpts := servers.ListOpts{
+             TenantID: config.TenantID,
+             Name: hostname,
+        }
+
+        allPages, err := servers.List(computeClient, listOpts).AllPages()
+        if err != nil {
+            panic(err)
+        }
+
+        allServers, err := servers.ExtractServers(allPages)
+        if err != nil {
+            panic(err)
+        }
+
+		if len(allServers) != 1 {
+			panic(fmt.Sprintf("Openstack servers list returned more than one server for name %s", hostname))
 		}
 
-		uuid, err := uuid.FromString(strings.TrimSpace(string(bytes)))
-		if err != nil {
-			log.WithError(err).Error("Error parsing machine id")
-			return nil, err
-		}
+        for _, server := range allServers {
+		    log.WithField("id", server.ID).Info("servers list")
+        }
 
-		log.WithField("id", uuid).Info("Machine ID detected")
-		config.MachineID = uuid.String()
+		config.MachineID = allServers[0].ID
 	} else {
 		log.WithField("id", config.MachineID).Debug("Using configured machine ID")
 	}
@@ -216,6 +231,7 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
 	// Attaching block volume to compute instance
 
 	opts := volumeattach.CreateOpts{VolumeID: vol.ID}
+	logger.Debugf("Attaching volume %s to Machine %s", vol.ID, d.config.MachineID)
 	_, err = volumeattach.Create(d.computeClient, d.config.MachineID, opts).Extract()
 
 	if err != nil {
@@ -226,9 +242,12 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
 	//
 	// Waiting for device appearance
 
-	dev := fmt.Sprintf("/dev/disk/by-id/virtio-%.20s", vol.ID)
-	logger.WithField("dev", dev).Debug("Waiting for device to appear...")
-	err = waitForDevice(dev)
+	// ID is sometimes truncated in device filename
+	devid := fmt.Sprintf("%.20s", vol.ID)
+	devpath := "/dev/disk/by-id"
+	logger.WithField("devid", devid).Debug("Waiting for device to appear...")
+	dev, err := waitForDevice(devpath, devid)
+	logger.WithField("dev", dev).Debug("Device found")
 
 	if err != nil {
 		logger.WithError(err).Error("Expected block device not found")

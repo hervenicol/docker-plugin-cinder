@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 )
 
@@ -32,29 +33,27 @@ func formatFilesystem(dev string, label string) error {
 	return nil
 }
 
-func waitForDevice(dev string) error {
-	_, err := os.Stat(dev)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			return err
-		}
-	} else {
-		return nil
-	}
+// look for a device which name contains id, under dir
+// and return the full path+filename
+func waitForDevice(dir string, id string) (string, error) {
 
-	for i := 1; i <= 10; i++ {
+	for i := 0; i <= 10; i++ {
+
+        files, err := os.ReadDir(dir)
+        if err != nil {
+            return "", err
+        }
+    
+        for _, file := range files {
+            if strings.Contains(file.Name(), id) {
+				return fmt.Sprintf("%s/%s", dir, file.Name()), nil
+            }
+        }
+
 		time.Sleep(500 * time.Millisecond)
-
-		if _, err = os.Stat(dev); err != nil {
-			if !os.IsNotExist(err) {
-				return err
-			}
-		} else {
-			return nil
-		}
 	}
 
-	return fmt.Errorf("Timeout waiting for file: %s", dev)
+	return "", fmt.Errorf("Timeout waiting for file: %s", id)
 }
 
 func isDirectoryPresent(path string) (bool, error) {
