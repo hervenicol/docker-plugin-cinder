@@ -28,7 +28,7 @@ func formatFilesystem(dev string, label string, filesystem string) (string, erro
 	out, err := exec.Command(mkfsBin, "-L", label, dev).CombinedOutput()
 
 	if err != nil {
-		return string(out), errors.New(fmt.Sprintf("Command: '%s -L %s %s' - err: '%s'", mkfsBin, label, dev, err, string(out)))
+		return string(out), errors.New(fmt.Sprintf("Command: '%s -L %s %s' - err: '%s'", mkfsBin, label, dev, err))
 	}
 
 	return "", nil

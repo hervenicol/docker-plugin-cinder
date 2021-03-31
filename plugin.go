@@ -266,7 +266,6 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
 	if fsType == "" {
 		logger.Debug("Volume is empty, formatting")
 		if out, err := formatFilesystem(dev, r.Name, d.config.Filesystem); err != nil {
-			// logger.WithError(err).Error("Formatting failed")
 			logger.WithFields(log.Fields{
 				"output": out,
 				"error": err,
@@ -358,7 +357,7 @@ func (d plugin) Unmount(r *volume.UnmountRequest) error {
 	path := filepath.Join(d.config.MountDir, r.Name)
 	exists, err := isDirectoryPresent(path)
 	if err != nil {
-		logger.WithError(err).Error("Error checking directory stat: %s", path)
+		logger.WithError(err).Errorf("Error checking directory stat: %s", path)
 	}
 
 	if exists {
