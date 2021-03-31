@@ -1,0 +1,44 @@
+---
+name: Go
+
+on:
+  push:
+    branches: [master]
+    tags: v[0-9].*
+  pull_request:
+    branches: [master]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16
+
+      - name: Build
+        run: go build -v ./...
+
+      - name: Test
+        run: go test -v ./...
+
+      - name: debug
+        run: pwd && ls -l && env
+
+      - name: Create release
+        uses: Roang-zero1/github-create-release-action@master
+        if: contains(github.ref, 'tags')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create GitHub release
+        uses: Roang-zero1/github-upload-release-artifacts-action@master
+        if: contains(github.ref, 'tags')
+        with:
+          args: docker-plugin-cinder
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
