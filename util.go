@@ -23,14 +23,15 @@ func getFilesystemType(dev string) (string, error) {
 	return string(out), nil
 }
 
-func formatFilesystem(dev string, label string) error {
-	out, err := exec.Command("mkfs.ext4", "-L", label, dev).CombinedOutput()
+func formatFilesystem(dev string, label string, filesystem string) (string, error) {
+	mkfsBin := fmt.Sprintf("mkfs.%s", filesystem)
+	out, err := exec.Command(mkfsBin, "-L", label, dev).CombinedOutput()
 
 	if err != nil {
-		return errors.New(string(out))
+		return string(out), errors.New(fmt.Sprintf("Command: '%s -L %s %s' - err: '%s'", mkfsBin, label, dev, err, string(out)))
 	}
 
-	return nil
+	return "", nil
 }
 
 // look for a device which name contains id, under dir

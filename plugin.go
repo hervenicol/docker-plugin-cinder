@@ -265,8 +265,13 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
 
 	if fsType == "" {
 		logger.Debug("Volume is empty, formatting")
-		if err := formatFilesystem(dev, r.Name); err != nil {
-			logger.WithError(err).Error("Formatting failed")
+		if out, err := formatFilesystem(dev, r.Name, d.config.Filesystem); err != nil {
+			// logger.WithError(err).Error("Formatting failed")
+			logger.WithFields(log.Fields{
+				"output": out,
+				"error": err,
+				"filesystem": d.config.Filesystem,
+			}).Error("Formatting failed")
 			return nil, err
 		}
 	}

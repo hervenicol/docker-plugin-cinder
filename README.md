@@ -38,7 +38,8 @@ Provide configuration for the plugin:
     "applicationCredentialName": "",
     "applicationCredentialSecret": "",
     "region": "",
-    "mountDir": ""
+    "mountDir": "",
+    "filesystem": ""
 }
 ```
 
