@@ -102,17 +102,19 @@ func (d plugin) Create(r *volume.CreateRequest) error {
 	defer d.mutex.Unlock()
 
 	// DEFAULT SIZE IN GB
-	var size = 10
+	var size = d.config.DefaultSize
 	// Default volume type
-	var volumeType = "classic"
+	var volumeType = d.config.DefaultType
 	var err error
 
 	if s, ok := r.Options["size"]; ok {
-		size, err = strconv.Atoi(s)
-		if err != nil {
-			logger.WithError(err).Error("Error parsing size option")
-			return fmt.Errorf("Invalid size option: %s", err.Error())
-		}
+		size = s
+	}
+
+	sizeInt, err := strconv.Atoi(size) 
+	if err != nil {
+		logger.WithError(err).Error("Error parsing size option")
+		return fmt.Errorf("Invalid size option: %s", err.Error())
 	}
 
 	if t, ok := r.Options["type"]; ok {
@@ -120,7 +122,7 @@ func (d plugin) Create(r *volume.CreateRequest) error {
 	}
 
 	vol, err := volumes.Create(d.blockClient, volumes.CreateOpts{
-		Size: size,
+		Size: sizeInt,
 		Name: r.Name,
 		VolumeType: volumeType,
 	}).Extract()

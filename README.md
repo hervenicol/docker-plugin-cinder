@@ -39,7 +39,9 @@ Provide configuration for the plugin:
     "applicationCredentialSecret": "",
     "region": "",
     "mountDir": "/var/cinder/mounts",
-    "filesystem": ""
+    "filesystem": "",
+    "defaultsize": "",
+    "defaulttype": ""
 }
 ```
 
@@ -72,13 +74,13 @@ By default a `cinder.json` from the current working directory will be used.
 
 ## Usage
 
-The default volume size is 10GB but can be overridden:
+The default volume size can be set in config, but can be overridden per volume:
 
 ```
 $ docker volume create -d cinder -o size=20 volname
 ```
 
-A specific volume type can be given:
+Same for volume type:
 
 ```
 $ docker volume create -d cinder -o type=high-speed volname

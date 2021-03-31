@@ -33,6 +33,8 @@ type tConfig struct {
 	MachineID                   string `json:"machineID,omitempty"`
 	MountDir                    string `json:"mountDir,omitempty"`
 	Filesystem                  string `json:"filesystem,omitempty"`
+	DefaultSize                 string `json:"defaultsize,omitempty"`
+	DefaultType                 string `json:"defaulttype,omitempty"`
 }
 
 func init() {
@@ -52,6 +54,8 @@ func main() {
 	flag.StringVar(&config.Prefix, "prefix", "docker-volume", "")
 	flag.StringVar(&config.MountDir, "mountDir", "", "")
 	flag.StringVar(&config.Filesystem, "filesystem", "ext4", "New volumes filesystem")
+	flag.StringVar(&config.DefaultSize, "defaultsize", "10", "New volumes default size")
+	flag.StringVar(&config.DefaultType, "defaulttype", "classic", "New volumes default type")
 	flag.Parse()
 
 	if len(configFile) == 0 {

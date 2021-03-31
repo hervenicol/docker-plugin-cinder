@@ -1,8 +1,9 @@
 # Changelog
 
-## next
+## v0.5.0
 
 * Support for "type" volume option (defaults to "classic")
+* Config file can set default volume size and default volume type
 
 ## v0.4.0
 
