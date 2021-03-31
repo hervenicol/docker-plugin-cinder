@@ -5,7 +5,7 @@ Before=docker.service
 [Service]
 RuntimeDirectory=cinder
 RuntimeDirectoryPreserve=true
-WorkingDirectory=%t/cinder
+WorkingDirectory=/var/lib/cinder
 ExecStart=/usr/local/bin/docker-plugin-cinder -config /etc/docker/cinder.json
 
 [Install]

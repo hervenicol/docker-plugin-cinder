@@ -38,7 +38,7 @@ Provide configuration for the plugin:
     "applicationCredentialName": "",
     "applicationCredentialSecret": "",
     "region": "",
-    "mountDir": "/var/cinder/mounts",
+    "mountDir": "/var/lib/cinder/mounts",
     "filesystem": "",
     "defaultsize": "",
     "defaulttype": ""
@@ -60,9 +60,10 @@ By default a `cinder.json` from the current working directory will be used.
 ## Run as a systemd service
 
 * Create your configuration file as `/etc/docker/cinder.json`
-* Copy `docker-plugin-cinder` as `ExecStart=/usr/local/bin/docker-plugin-cinder`
+* Copy `docker-plugin-cinder` as `/usr/local/bin/docker-plugin-cinder`
+* Create workdir: `mkdir -p /var/lib/cinder/mounts`
 * Use example/docker-plugin-cinder.service as systemd unit file:
-  * `cp example/docker-plugin-cinder.service etc/systemd/system/docker-plugin-cinder.service` 
+  * `cp example/docker-plugin-cinder.service /etc/systemd/system/docker-plugin-cinder.service` 
   * `chmod 644 /etc/systemd/system/docker-plugin-cinder.service`
   * `systemctl daemon-reload`
   * `systemctl enable docker-plugin-cinder`
