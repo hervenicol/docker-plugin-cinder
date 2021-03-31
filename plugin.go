@@ -103,6 +103,8 @@ func (d plugin) Create(r *volume.CreateRequest) error {
 
 	// DEFAULT SIZE IN GB
 	var size = 10
+	// Default volume type
+	var volumeType = "classic"
 	var err error
 
 	if s, ok := r.Options["size"]; ok {
@@ -113,9 +115,14 @@ func (d plugin) Create(r *volume.CreateRequest) error {
 		}
 	}
 
+	if t, ok := r.Options["type"]; ok {
+		volumeType = t
+	}
+
 	vol, err := volumes.Create(d.blockClient, volumes.CreateOpts{
 		Size: size,
 		Name: r.Name,
+		VolumeType: volumeType,
 	}).Extract()
 
 	if err != nil {

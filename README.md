@@ -78,6 +78,12 @@ The default volume size is 10GB but can be overridden:
 $ docker volume create -d cinder -o size=20 volname
 ```
 
+A specific volume type can be given:
+
+```
+$ docker volume create -d cinder -o type=high-speed volname
+```
+
 
 ## Notes
 
