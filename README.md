@@ -21,7 +21,7 @@ docker run -ti --rm -v "$(pwd)":/go/docker-plugin-cinder -w /go/docker-plugin-ci
 ```
 
 
-## Setup
+## Setup - interactive
 
 Provide configuration for the plugin:
 
@@ -38,7 +38,7 @@ Provide configuration for the plugin:
     "applicationCredentialName": "",
     "applicationCredentialSecret": "",
     "region": "",
-    "mountDir": "",
+    "mountDir": "/var/cinder/mounts",
     "filesystem": ""
 }
 ```
@@ -46,13 +46,29 @@ Provide configuration for the plugin:
 Run the daemon before docker:
 
 ```
-$ /usr/local/bin/docker-plugin-cinder -config /path/to/config.json
+$ ./docker-plugin-cinder -config config.json
 INFO Connecting...                                 endpoint="http://api.os.xopic.de:5000/v3"
 INFO servers list                                  id=dadfaf91-dbfc-492c-8701-1de57b998817
 INFO Connected.                                    endpoint="http://api.os.xopic.de:5000/v3"
 ```
 
 By default a `cinder.json` from the current working directory will be used.
+
+
+## Run as a systemd service
+
+* Create your configuration file as `/etc/docker/cinder.json`
+* Copy `docker-plugin-cinder` as `ExecStart=/usr/local/bin/docker-plugin-cinder`
+* Use example/docker-plugin-cinder.service as systemd unit file:
+  * `cp example/docker-plugin-cinder.service etc/systemd/system/docker-plugin-cinder.service` 
+  * `chmod 644 /etc/systemd/system/docker-plugin-cinder.service`
+  * `systemctl daemon-reload`
+  * `systemctl enable docker-plugin-cinder`
+
+## Run as a docker plugin
+
+... yet to be written ...
+
 
 ## Usage
 
