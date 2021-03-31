@@ -7,9 +7,18 @@ The plugin attaches block storage volumes to the compute instance running the pl
 
 ## Requirements
 
+Tested on OVH Public Cloud Openstack
+
 * Block Storage API v3
 * Compute API v2
-* KVM w/ virtio
+* QEMU
+
+
+## Build
+
+```
+docker run -ti --rm -v "$(pwd)":/go/docker-plugin-cinder -w /go/docker-plugin-cinder golang:1.16 go build -o docker-plugin-cinder
+```
 
 
 ## Setup
@@ -38,7 +47,7 @@ Run the daemon before docker:
 ```
 $ /usr/local/bin/docker-plugin-cinder -config /path/to/config.json
 INFO Connecting...                                 endpoint="http://api.os.xopic.de:5000/v3"
-INFO Machine ID detected                           id=e0f89b1b-ceeb-4ec5-b8f1-1b9c274f8e7b
+INFO servers list                                  id=dadfaf91-dbfc-492c-8701-1de57b998817
 INFO Connected.                                    endpoint="http://api.os.xopic.de:5000/v3"
 ```
 
@@ -57,7 +66,8 @@ $ docker volume create -d cinder -o size=20 volname
 
 ### Machine ID
 
-This plugins expects `/etc/machine-id` to be the OpenStack compute instance UUID which seems to be the case when booting cloud images with KVM. Otherwise configure `machineID` in the configuration file.
+Original plugin was relying on `/etc/machine-id`. This version does not. Instead, it serches in Openstack servers list, based on the machine's hostname.
+But you can force your server's ID with `machineID` in the configuration file.
 
 ### Attaching volumes
 
