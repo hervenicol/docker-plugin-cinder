@@ -18,7 +18,6 @@ import (
 type tConfig struct {
 	Debug                       bool
 	Quiet                       bool
-	Prefix                      string `json:"prefix,omitempty"`
 	IdentityEndpoint            string `json:"endpoint,omitempty"`
 	Username                    string `json:"username,omitempty"`
 	Password                    string `json:"password,omitempty"`
@@ -51,7 +50,6 @@ func main() {
 	flag.BoolVar(&config.Debug, "debug", false, "Enable debug logging")
 	flag.BoolVar(&config.Quiet, "quiet", false, "Only report errors")
 	flag.StringVar(&configFile, "config", "", "")
-	flag.StringVar(&config.Prefix, "prefix", "docker-volume", "")
 	flag.StringVar(&config.MountDir, "mountDir", "", "")
 	flag.StringVar(&config.Filesystem, "filesystem", "ext4", "New volumes filesystem")
 	flag.StringVar(&config.DefaultSize, "defaultsize", "10", "New volumes default size")
