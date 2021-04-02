@@ -34,6 +34,7 @@ type tConfig struct {
 	Filesystem                  string `json:"filesystem,omitempty"`
 	DefaultSize                 string `json:"defaultsize,omitempty"`
 	DefaultType                 string `json:"defaulttype,omitempty"`
+	VolumeSubDir                string `json:"volumeSubDir,omitempty"`
 }
 
 func init() {
@@ -51,9 +52,10 @@ func main() {
 	flag.BoolVar(&config.Quiet, "quiet", false, "Only report errors")
 	flag.StringVar(&configFile, "config", "", "")
 	flag.StringVar(&config.MountDir, "mountDir", "", "")
-	flag.StringVar(&config.Filesystem, "filesystem", "ext4", "New volumes filesystem")
-	flag.StringVar(&config.DefaultSize, "defaultsize", "10", "New volumes default size")
-	flag.StringVar(&config.DefaultType, "defaulttype", "classic", "New volumes default type")
+	flag.StringVar(&config.Filesystem, "filesystem", "ext4", "New volumes filesystem (ext4)")
+	flag.StringVar(&config.DefaultSize, "defaultsize", "10", "New volumes default size (10)")
+	flag.StringVar(&config.DefaultType, "defaulttype", "classic", "New volumes default type (classic)")
+	flag.StringVar(&config.VolumeSubDir, "volumeSubDir", "data", "Volumes subdirectory (data)")
 	flag.Parse()
 
 	if len(configFile) == 0 {

@@ -39,9 +39,10 @@ Provide configuration for the plugin:
     "applicationCredentialSecret": "",
     "region": "",
     "mountDir": "/var/lib/cinder/mounts",
-    "filesystem": "",
-    "defaultsize": "",
-    "defaulttype": ""
+    "filesystem": "xfs",
+    "defaultsize": "1",
+    "defaulttype": "high-speed",
+    "volumeSubDir": "data"
 }
 ```
 

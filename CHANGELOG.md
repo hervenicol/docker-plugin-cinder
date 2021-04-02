@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.6.0
+
+* BREAKING: now creates a directory at the root of the volumes - eases giving specific access rights to a volume, and makes it compatible with rexray volumes. Use `"volumeSubDir": ""` in config for previous behaviour.
+
 ## v0.5.0
 
 * Support for "type" volume option (defaults to "classic")

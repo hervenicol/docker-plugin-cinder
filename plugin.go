@@ -144,7 +144,7 @@ func (d plugin) Get(r *volume.GetRequest) (*volume.GetResponse, error) {
 	vol, err := d.getByName(r.Name)
 
 	if err != nil {
-		logger.WithError(err).Errorf("Error retriving volume: %s", err.Error())
+		logger.WithError(err).Errorf("Error retrieving volume: %s", err.Error())
 		return nil, err
 	}
 
@@ -152,7 +152,7 @@ func (d plugin) Get(r *volume.GetRequest) (*volume.GetResponse, error) {
 		Volume: &volume.Volume{
 			Name:       r.Name,
 			CreatedAt:  vol.CreatedAt.Format(time.RFC3339),
-			Mountpoint: filepath.Join(d.config.MountDir, r.Name),
+			Mountpoint: filepath.Join(d.config.MountDir, r.Name, d.config.VolumeSubDir),
 		},
 	}
 
@@ -272,8 +272,10 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
 		return nil, err
 	}
 
+	newVolumeFlag := false
 	if fsType == "" {
 		logger.Debug("Volume is empty, formatting")
+		newVolumeFlag = true
 		if out, err := formatFilesystem(dev, r.Name, d.config.Filesystem); err != nil {
 			logger.WithFields(log.Fields{
 				"output": out,
@@ -300,8 +302,28 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
 		return nil, errors.New(string(out))
 	}
 
+   	if newVolumeFlag {
+
+		// new volume settings
+    	var perm = 0700
+    	var uid = 0
+    	var gid = 0
+    	path := filepath.Join(d.config.MountDir, r.Name, d.config.VolumeSubDir)
+    
+		logger.Debugf("New volume, creating VolumeSubDir %s, uid %d / gid %d / perm %o", d.config.VolumeSubDir, uid, gid, perm)
+
+    	if err = os.MkdirAll(path, os.FileMode(perm)); err != nil {
+    		logger.WithError(err).Error("Error creating VolumeSubDir")
+    		return nil, err
+    	}
+		if err = os.Chown(path, uid, gid); err != nil {
+    		logger.WithError(err).Error("Error creating VolumeSubDir")
+    		return nil, err
+		}
+	}
+
 	resp := volume.MountResponse{
-		Mountpoint: path,
+		Mountpoint: filepath.Join(path, d.config.VolumeSubDir),
 	}
 
 	logger.Debug("Volume successfully mounted")
@@ -314,7 +336,7 @@ func (d plugin) Path(r *volume.PathRequest) (*volume.PathResponse, error) {
 	logger.Debugf("Path: %+v", r)
 
 	resp := volume.PathResponse{
-		Mountpoint: filepath.Join(d.config.MountDir, r.Name),
+		Mountpoint: filepath.Join(d.config.MountDir, r.Name, d.config.VolumeSubDir),
 	}
 
 	return &resp, nil
