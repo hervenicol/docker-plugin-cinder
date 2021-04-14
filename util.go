@@ -25,6 +25,9 @@ func getFilesystemType(dev string) (string, error) {
 
 func formatFilesystem(dev string, label string, filesystem string) (string, error) {
 	mkfsBin := fmt.Sprintf("mkfs.%s", filesystem)
+	if len(label) > 12 {
+		label=label[:12]
+	}
 
 	out, err := exec.Command(mkfsBin, "-L", label, dev).CombinedOutput()
 

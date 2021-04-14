@@ -2,6 +2,7 @@
 
 ## v0.7.0
 
+* fix label too long errors at mkfs
 * Configurable timeouts and delays: timeoutVolumeState, timeoutDeviceWait, delayVolumeState, delayDeviceWait
 
 ## v0.6.0
