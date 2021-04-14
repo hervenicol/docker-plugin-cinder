@@ -4,6 +4,7 @@
 
 * fix label too long errors at mkfs
 * Configurable timeouts and delays: timeoutVolumeState, timeoutDeviceWait, delayVolumeState, delayDeviceWait
+* Improve config / command line parameters
 
 ## v0.6.0
 

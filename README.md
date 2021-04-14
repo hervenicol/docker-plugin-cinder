@@ -40,8 +40,8 @@ Provide configuration for the plugin:
     "region": "",
     "mountDir": "/var/lib/cinder/mounts",
     "filesystem": "xfs",
-    "defaultsize": "1",
-    "defaulttype": "high-speed",
+    "defaultSize": "1",
+    "defaultType": "high-speed",
     "volumeSubDir": "data"
 }
 ```

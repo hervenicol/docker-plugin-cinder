@@ -32,8 +32,8 @@ type tConfig struct {
 	MachineID                   string `json:"machineID,omitempty"`
 	MountDir                    string `json:"mountDir,omitempty"`
 	Filesystem                  string `json:"filesystem,omitempty"`
-	DefaultSize                 string `json:"defaultsize,omitempty"`
-	DefaultType                 string `json:"defaulttype,omitempty"`
+	DefaultSize                 string `json:"defaultSize,omitempty"`
+	DefaultType                 string `json:"defaultType,omitempty"`
 	VolumeSubDir                string `json:"volumeSubDir,omitempty"`
 	TimeoutVolumeState          int `json:"timeoutVolumeState,omitempty"`
 	TimeoutDeviceWait           int `json:"timeoutDeviceWait,omitempty"`
@@ -54,21 +54,18 @@ func main() {
 	var configFile string
 	flag.BoolVar(&config.Debug, "debug", false, "Enable debug logging")
 	flag.BoolVar(&config.Quiet, "quiet", false, "Only report errors")
-	flag.StringVar(&configFile, "config", "", "")
-	flag.StringVar(&config.MountDir, "mountDir", "", "")
+	flag.StringVar(&configFile, "config", "cinder.json", "Config file")
+	flag.StringVar(&config.MountDir, "mountDir", "/var/lib/cinder/mount", "Cinder mount directory")
+	flag.StringVar(&config.MachineID, "machineID", "", "force machine ID")
 	flag.StringVar(&config.Filesystem, "filesystem", "ext4", "New volumes filesystem (ext4)")
-	flag.StringVar(&config.DefaultSize, "defaultsize", "10", "New volumes default size (10)")
-	flag.StringVar(&config.DefaultType, "defaulttype", "classic", "New volumes default type (classic)")
+	flag.StringVar(&config.DefaultSize, "defaultSize", "10", "New volumes default size (10)")
+	flag.StringVar(&config.DefaultType, "defaultType", "classic", "New volumes default type (classic)")
 	flag.StringVar(&config.VolumeSubDir, "volumeSubDir", "data", "Volumes subdirectory (data)")
 	flag.IntVar(&config.TimeoutVolumeState, "timeoutVolumeState", 5, "Timeout for waitOnVolumeState (s)")
 	flag.IntVar(&config.TimeoutDeviceWait, "timeoutDeviceWait", 5, "Timeout when waiting for device attachment (s)")
 	flag.IntVar(&config.DelayVolumeState, "delayVolumeState", 1, "Delay after waitOnVolumeState (s)")
 	flag.IntVar(&config.DelayDeviceWait, "delayDeviceWait", 1, "Delay after device attachment (s)")
 	flag.Parse()
-
-	if len(configFile) == 0 {
-		configFile = "cinder.json"
-	}
 
 	log.SetFormatter(&log.TextFormatter{DisableTimestamp: true})
 	log.SetOutput(os.Stdout)
