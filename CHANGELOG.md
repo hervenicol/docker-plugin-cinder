@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.7.0
+
+* Configurable timeouts and delays: timeoutVolumeState, timeoutDeviceWait, delayVolumeState, delayDeviceWait
+
 ## v0.6.0
 
 * BREAKING: now creates a directory at the root of the volumes - eases giving specific access rights to a volume, and makes it compatible with rexray volumes. Use `"volumeSubDir": ""` in config for previous behaviour.

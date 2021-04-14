@@ -25,6 +25,7 @@ func getFilesystemType(dev string) (string, error) {
 
 func formatFilesystem(dev string, label string, filesystem string) (string, error) {
 	mkfsBin := fmt.Sprintf("mkfs.%s", filesystem)
+
 	out, err := exec.Command(mkfsBin, "-L", label, dev).CombinedOutput()
 
 	if err != nil {
@@ -36,9 +37,9 @@ func formatFilesystem(dev string, label string, filesystem string) (string, erro
 
 // look for a device which name contains id, under dir
 // and return the full path+filename
-func waitForDevice(dir string, id string) (string, error) {
+func waitForDevice(dir string, id string, timeout int) (string, error) {
 
-	for i := 0; i <= 10; i++ {
+	for i := 0; i <= timeout; i++ {
 
         files, err := os.ReadDir(dir)
         if err != nil {
@@ -51,7 +52,7 @@ func waitForDevice(dir string, id string) (string, error) {
             }
         }
 
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(1 * time.Second)
 	}
 
 	return "", fmt.Errorf("Timeout waiting for file: %s", id)

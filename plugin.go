@@ -255,7 +255,8 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
 	devid := fmt.Sprintf("%.20s", vol.ID)
 	devpath := "/dev/disk/by-id"
 	logger.WithField("devid", devid).Debug("Waiting for device to appear...")
-	dev, err := waitForDevice(devpath, devid)
+	dev, err := waitForDevice(devpath, devid, d.config.TimeoutDeviceWait)
+	time.Sleep(time.Duration(d.config.DelayDeviceWait) * time.Second)
 	logger.WithField("dev", dev).Debug("Device found")
 
 	if err != nil {
@@ -455,8 +456,10 @@ func (d plugin) waitOnVolumeState(ctx context.Context, vol *volumes.Volume, stat
 		return vol, nil
 	}
 
-	for i := 1; i <= 10; i++ {
-		time.Sleep(500 * time.Millisecond)
+	timeout := d.config.TimeoutVolumeState
+
+	for i := 1; i <= timeout; i++ {
+		time.Sleep(1000 * time.Millisecond)
 
 		vol, err := volumes.Get(d.blockClient, vol.ID).Extract()
 		if err != nil {
@@ -464,6 +467,7 @@ func (d plugin) waitOnVolumeState(ctx context.Context, vol *volumes.Volume, stat
 		}
 
 		if vol.Status == status {
+			time.Sleep(time.Duration(d.config.DelayVolumeState) * time.Second)
 			return vol, nil
 		}
 	}

@@ -35,6 +35,10 @@ type tConfig struct {
 	DefaultSize                 string `json:"defaultsize,omitempty"`
 	DefaultType                 string `json:"defaulttype,omitempty"`
 	VolumeSubDir                string `json:"volumeSubDir,omitempty"`
+	TimeoutVolumeState          int `json:"timeoutVolumeState,omitempty"`
+	TimeoutDeviceWait           int `json:"timeoutDeviceWait,omitempty"`
+	DelayVolumeState            int `json:"delayVolumeState,omitempty"`
+	DelayDeviceWait             int `json:"delayDeviceWait,omitempty"`
 }
 
 func init() {
@@ -56,6 +60,10 @@ func main() {
 	flag.StringVar(&config.DefaultSize, "defaultsize", "10", "New volumes default size (10)")
 	flag.StringVar(&config.DefaultType, "defaulttype", "classic", "New volumes default type (classic)")
 	flag.StringVar(&config.VolumeSubDir, "volumeSubDir", "data", "Volumes subdirectory (data)")
+	flag.IntVar(&config.TimeoutVolumeState, "timeoutVolumeState", 5, "Timeout for waitOnVolumeState (s)")
+	flag.IntVar(&config.TimeoutDeviceWait, "timeoutDeviceWait", 5, "Timeout when waiting for device attachment (s)")
+	flag.IntVar(&config.DelayVolumeState, "delayVolumeState", 1, "Delay after waitOnVolumeState (s)")
+	flag.IntVar(&config.DelayDeviceWait, "delayDeviceWait", 1, "Delay after device attachment (s)")
 	flag.Parse()
 
 	if len(configFile) == 0 {
