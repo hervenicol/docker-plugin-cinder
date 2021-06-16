@@ -33,6 +33,9 @@ type plugin struct {
 func newPlugin(provider *gophercloud.ProviderClient, endpointOpts gophercloud.EndpointOpts, config *tConfig) (*plugin, error) {
 	blockClient, err := openstack.NewBlockStorageV3(provider, endpointOpts)
 
+	logger := log.WithFields(log.Fields{"action": "newPlugin"})
+	logger.Debugf("newPlugin")
+
 	if err != nil {
 		return nil, err
 	}
@@ -88,6 +91,9 @@ func newPlugin(provider *gophercloud.ProviderClient, endpointOpts gophercloud.En
 }
 
 func (d plugin) Capabilities() *volume.CapabilitiesResponse {
+	logger := log.WithFields(log.Fields{"action": "Capabilities"})
+	logger.Debugf("Capabilities")
+
 	return &volume.CapabilitiesResponse{
 		Capabilities: volume.Capability{Scope: "global"},
 	}
@@ -413,6 +419,9 @@ func (d plugin) Unmount(r *volume.UnmountRequest) error {
 }
 
 func (d plugin) getByName(name string) (*volumes.Volume, error) {
+	logger := log.WithFields(log.Fields{"name": name, "action": "getByName"})
+	logger.Debugf("GetbyName")
+
 	var volume *volumes.Volume
 
 	pager := volumes.List(d.blockClient, volumes.ListOpts{Name: name})
@@ -474,5 +483,5 @@ func (d plugin) waitOnVolumeState(ctx context.Context, vol *volumes.Volume, stat
 
 	log.WithContext(ctx).Debugf("Volume did not become %s: %+v", status, vol)
 
-	return nil, fmt.Errorf("Volume status did became %s", status)
+	return nil, fmt.Errorf("Volume status became %s", vol.Status)
 }
