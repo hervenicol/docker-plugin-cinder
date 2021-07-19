@@ -398,7 +398,9 @@ func (d plugin) Unmount(r *volume.UnmountRequest) error {
 		logger.WithError(err).Errorf("Error checking directory stat: %s", path)
 	}
 
-	if exists {
+	// error with "stats" usually means it exists but we can't reach it
+	// that means mounted but broken. So we must unmount it.
+	if exists || (err != nil) {
 		err = syscall.Unmount(path, 0)
 		if err != nil {
 			logger.WithError(err).Errorf("Error unmount %s", path)
@@ -407,7 +409,7 @@ func (d plugin) Unmount(r *volume.UnmountRequest) error {
 
 	vol, err := d.getByName(r.Name)
 	if err != nil {
-		logger.WithError(err).Error("Error retriving volume")
+		logger.WithError(err).Error("Error retrieving volume")
 	} else {
 		_, err = d.detachVolume(logger.Context, vol)
 		if err != nil {

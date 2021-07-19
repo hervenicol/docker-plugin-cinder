@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.8.0
+* fix did not umount when volume is broken
+
 ## v0.7.0
 
 * fix label too long errors at mkfs
