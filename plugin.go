@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+    "strings"
 	"strconv"
 	"sync"
 	"syscall"
@@ -111,13 +112,16 @@ func (d plugin) Create(r *volume.CreateRequest) error {
 	var size = d.config.DefaultSize
 	// Default volume type
 	var volumeType = d.config.DefaultType
+    // No encryption by default
+    var encryption = false
 	var err error
+    keyfile := d.config.EncryptionKey
 
 	if s, ok := r.Options["size"]; ok {
 		size = s
 	}
 
-	sizeInt, err := strconv.Atoi(size) 
+	sizeInt, err := strconv.Atoi(size)
 	if err != nil {
 		logger.WithError(err).Error("Error parsing size option")
 		return fmt.Errorf("Invalid size option: %s", err.Error())
@@ -125,6 +129,18 @@ func (d plugin) Create(r *volume.CreateRequest) error {
 
 	if t, ok := r.Options["type"]; ok {
 		volumeType = t
+	}
+
+    // if "encryption" option is anything else than "false", it means we want the volume encrypted
+	if e, ok := r.Options["encryption"]; ok {
+        if strings.ToLower(e) != "false" {
+            logger.Debug("Encryption set to true")
+            if keyfile == "" {
+                logger.Info("Can't encrypt volume, no encryptionKey in config")
+            } else {
+	            encryption = true
+            }
+        }
 	}
 
 	vol, err := volumes.Create(d.blockClient, volumes.CreateOpts{
@@ -139,6 +155,37 @@ func (d plugin) Create(r *volume.CreateRequest) error {
 	}
 
 	logger.WithField("id", vol.ID).Debug("Volume created")
+
+
+    // attach & encrypt
+    // We must do it here, because Mount() does not have config info
+    logger.Debugf("Encryption status: %t", encryption)
+    if encryption {
+        // attach
+        dev, err := attachVolume(&d, r.Name)
+	    if err != nil {
+	    	logger.WithError(err).Errorf("Error attaching volume: %s", err.Error())
+	    	return err
+	    }
+        // encrypt
+        logger.Debugf("Encrypting device %s with key %s", dev, keyfile)
+        err = luksFormat(dev, keyfile)
+	    if err != nil {
+	    	logger.WithError(err).Errorf("Error encrypting volume: %s", err.Error())
+	    	return err
+	    }
+
+        // detach
+	    vol, err := d.getByName(r.Name)
+	    if err != nil {
+		    logger.WithError(err).Error("Error retrieving volume")
+	    } else {
+		    _, err = d.detachVolume(logger.Context, vol)
+		    if err != nil {
+			    logger.WithError(err).Error("Error detaching volume")
+		    }
+	    }
+    }
 
 	return nil
 }
@@ -203,76 +250,36 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
-	vol, err := d.getByName(r.Name)
-	if err != nil {
-		logger.WithError(err).Errorf("Error retriving volume: %s", err.Error())
-		return nil, err
-	}
+    var dev = ""
 
-	logger = logger.WithField("id", vol.ID)
-
-	if vol.Status == "creating" || vol.Status == "detaching" {
-		logger.Infof("Volume is in '%s' state, wait for 'available'...", vol.Status)
-		if vol, err = d.waitOnVolumeState(logger.Context, vol, "available"); err != nil {
-			logger.Error(err.Error())
-			return nil, err
-		}
-	}
-
-	if vol, err = volumes.Get(d.blockClient, vol.ID).Extract(); err != nil {
-		return nil, err
-	}
-
-	if len(vol.Attachments) > 0 {
-		logger.Debug("Volume already attached, detaching first")
-		if vol, err = d.detachVolume(logger.Context, vol); err != nil {
-			logger.WithError(err).Error("Error detaching volume")
-			return nil, err
-		}
-
-		if vol, err = d.waitOnVolumeState(logger.Context, vol, "available"); err != nil {
-			logger.WithError(err).Error("Error detaching volume")
-			return nil, err
-		}
-	}
-
-	if vol.Status != "available" {
-		logger.Debugf("Volume: %+v\n", vol)
-		logger.Errorf("Invalid volume state for mounting: %s", vol.Status)
-		return nil, errors.New("Invalid Volume State")
-	}
-
-	//
-	// Attaching block volume to compute instance
-
-	opts := volumeattach.CreateOpts{VolumeID: vol.ID}
-	logger.Debugf("Attaching volume %s to Machine %s", vol.ID, d.config.MachineID)
-	_, err = volumeattach.Create(d.computeClient, d.config.MachineID, opts).Extract()
-
+    physdev, err := attachVolume(&d, r.Name)
 	if err != nil {
 		logger.WithError(err).Errorf("Error attaching volume: %s", err.Error())
 		return nil, err
 	}
 
-	//
-	// Waiting for device appearance
+    // Is it encrypted?
+    if result, err := isLuks(physdev); result == true {
+        logger.Debugf("Encrypted volume - using key file \"%s\"", d.config.EncryptionKey)
+        // If yes, we must have a passphrase.
+        if d.config.EncryptionKey == "" {
+		    logger.Errorf("Device %s is encrypted, and I have no pass to decrypt it.", physdev)
+		    return nil, err
+        }
+        // luksOpen it, or quit with error.
+        luksName, err := luksOpen(physdev, d.config.EncryptionKey, r.Name)
+	    if err != nil {
+	       	logger.WithError(err).Errorf("Opening LUKS device %s as %s with key %s failed", physdev, luksName, d.config.EncryptionKey)
+	   	    return nil, err
+	    }
+        // Select dm device
+        dev = "/dev/mapper/"+luksName
+    } else {
+        // or stay on physical device
+        dev = physdev
+    }
 
-	// ID is sometimes truncated in device filename
-	devid := fmt.Sprintf("%.20s", vol.ID)
-	devpath := "/dev/disk/by-id"
-	logger.WithField("devid", devid).Debug("Waiting for device to appear...")
-	dev, err := waitForDevice(devpath, devid, d.config.TimeoutDeviceWait)
-	time.Sleep(time.Duration(d.config.DelayDeviceWait) * time.Second)
-	logger.WithField("dev", dev).Debug("Device found")
-
-	if err != nil {
-		logger.WithError(err).Error("Expected block device not found")
-		return nil, fmt.Errorf("Block device not found: %s", dev)
-	}
-
-	//
-	// Check filesystem and format if necessary
-
+    // Is it formated ? (whether it's encrypted or not)
 	fsType, err := getFilesystemType(dev)
 	if err != nil {
 		logger.WithError(err).Error("Detecting filesystem type failed")
@@ -280,9 +287,12 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
 	}
 
 	newVolumeFlag := false
+    // If not formated:
 	if fsType == "" {
-		logger.Debug("Volume is empty, formatting")
 		newVolumeFlag = true
+
+        // Format it
+		logger.Debug("Volume is empty, formatting")
 		if out, err := formatFilesystem(dev, r.Name, d.config.Filesystem); err != nil {
 			logger.WithFields(log.Fields{
 				"output": out,
@@ -316,7 +326,7 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
     	var uid = 0
     	var gid = 0
     	path := filepath.Join(d.config.MountDir, r.Name, d.config.VolumeSubDir)
-    
+
 		logger.Debugf("New volume, creating VolumeSubDir %s, uid %d / gid %d / perm %o", d.config.VolumeSubDir, uid, gid, perm)
 
     	if err = os.MkdirAll(path, os.FileMode(perm)); err != nil {
@@ -393,6 +403,10 @@ func (d plugin) Unmount(r *volume.UnmountRequest) error {
 	defer d.mutex.Unlock()
 
 	path := filepath.Join(d.config.MountDir, r.Name)
+
+    // find device behind volume and luks volume name (in case it is a luks encrypted volume)
+    _, luksName, baseDevice, err := getLuksInfo(path)
+
 	exists, err := isDirectoryPresent(path)
 	if err != nil {
 		logger.WithError(err).Errorf("Error checking directory stat: %s", path)
@@ -406,6 +420,17 @@ func (d plugin) Unmount(r *volume.UnmountRequest) error {
 			logger.WithError(err).Errorf("Error unmount %s", path)
 		}
 	}
+
+    // Now the volume is unmounted, we close the luks volume (if it is one):
+    if baseDevice != "" {
+        if result, _ := isLuks(baseDevice); result == true {
+            logger.Debugf("Closing LUKS device %s", luksName)
+            luksCloseOutput, err := exec.Command("cryptsetup", "luksClose", luksName).CombinedOutput()
+            if err != nil {
+                logger.WithError(err).Errorf("Error closing LUKS volume - %s", luksCloseOutput)
+            }
+        }
+    }
 
 	vol, err := d.getByName(r.Name)
 	if err != nil {
