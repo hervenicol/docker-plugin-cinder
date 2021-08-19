@@ -43,6 +43,7 @@ Provide configuration for the plugin:
     "defaultSize": "1",
     "defaultType": "high-speed",
     "volumeSubDir": "data"
+    "encryptionKey": "/etc/lukskeys/docker"
 }
 ```
 
@@ -64,7 +65,7 @@ By default a `cinder.json` from the current working directory will be used.
 * Copy `docker-plugin-cinder` as `/usr/local/bin/docker-plugin-cinder`
 * Create workdir: `mkdir -p /var/lib/cinder/mounts`
 * Use example/docker-plugin-cinder.service as systemd unit file:
-  * `cp example/docker-plugin-cinder.service /etc/systemd/system/docker-plugin-cinder.service` 
+  * `cp example/docker-plugin-cinder.service /etc/systemd/system/docker-plugin-cinder.service`
   * `chmod 644 /etc/systemd/system/docker-plugin-cinder.service`
   * `systemctl daemon-reload`
   * `systemctl enable docker-plugin-cinder`
@@ -99,6 +100,13 @@ But you can force your server's ID with `machineID` in the configuration file.
 ### Attaching volumes
 
 Requested volumes that are already attached will be forcefully detached and moved to the requesting machine.
+
+### Encryption
+
+Encryption uses LUKS and dm-crypt. It requires the `cryptsetup` command to be installed on the host.
+You need to provide an encryption key file that will be used for all volumes.
+This key is in the config file as "encryptionKey".
+Then, to encrypt a volume at creation, add `encryption: "true"` in your volume options.
 
 
 ## License
