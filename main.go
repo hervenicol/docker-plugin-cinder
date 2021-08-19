@@ -62,7 +62,7 @@ func main() {
 	flag.StringVar(&config.DefaultSize, "defaultSize", "10", "New volumes default size (10)")
 	flag.StringVar(&config.DefaultType, "defaultType", "classic", "New volumes default type (classic)")
 	flag.StringVar(&config.VolumeSubDir, "volumeSubDir", "data", "Volumes subdirectory (data)")
-	flag.StringVar(&config.EncryptionKey, "encryptionKey", "", "LUKS encryption key patr")
+	flag.StringVar(&config.EncryptionKey, "encryptionKey", "", "LUKS encryption key path")
 	flag.IntVar(&config.TimeoutVolumeState, "timeoutVolumeState", 5, "Timeout for waitOnVolumeState (s)")
 	flag.IntVar(&config.TimeoutDeviceWait, "timeoutDeviceWait", 5, "Timeout when waiting for device attachment (s)")
 	flag.IntVar(&config.DelayVolumeState, "delayVolumeState", 1, "Delay after waitOnVolumeState (s)")

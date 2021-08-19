@@ -279,7 +279,10 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
 		dev = physdev
 	}
 
-	// Is it formated ? (whether it's encrypted or not)
+
+    //
+    // Check filesystem and format if needed
+
 	fsType, err := getFilesystemType(dev)
 	if err != nil {
 		logger.WithError(err).Error("Detecting filesystem type failed")

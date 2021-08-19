@@ -55,7 +55,6 @@ func getLuksInfo(mountPath string) (string, string, string, error) {
 	}
 	defer func() {
 		if err = f.Close(); err != nil {
-			// return "", "", "", errors.New(fmt.Sprintf("Failed closing %s - %s", procsMount, err))
 			os.Exit(1)
 		}
 	}()
