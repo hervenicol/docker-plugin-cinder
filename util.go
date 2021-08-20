@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 	"bufio"
+	"syscall"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/gophercloud/gophercloud/openstack/blockstorage/v3/volumes"
@@ -110,7 +111,7 @@ func getLuksInfo(mountPath string) (string, string, string, error) {
 	}
 
 	// All went well, here is the retrieved info
-	logger.Debugf("Mount found for %s - device %s - luks name %s - base device %s\n", mountPath, mountDevice, luksName, baseDevice)
+	logger.Debugf("Mount found for '%s' - device '%s' - luks name '%s' - base device '%s'", mountPath, mountDevice, luksName, baseDevice)
 	return mountDevice, luksName, baseDevice, nil
 }
 
@@ -291,4 +292,36 @@ func isDirectoryPresent(path string) (bool, error) {
 	} else {
 		return stat.IsDir(), nil
 	}
+}
+
+func createMountDir(path string) (error) {
+	// Sometimes mkdir fails, and I've observed it is a symptom of a bug
+	// where volume is half-mounted (?)
+	// this can be solved with umount
+	// (anyway the volume should not be mounted at this point)
+
+	// as I suspect this "half-mounted" problem comes from a race condition
+	// where unmount of the previous container and mount of the new container
+	// may be too fast (or maybe at the same time?),
+	// I prefer to wait a bit before retrying the unmount.
+
+	logger := log.WithFields(log.Fields{"action": "createMountDir"})
+	sleep := 1 * time.Second
+	for retry := 0; retry < 3; retry++ {
+
+		// If mkdir is OK, proceed to next step
+		if err := os.MkdirAll(path, 0700); err == nil {
+			return nil
+		}
+
+		// exponential backoff
+		time.Sleep(sleep)
+		sleep = sleep * 2
+
+		err := syscall.Unmount(path, 0)
+		if err != nil {
+			logger.WithError(err).Errorf("Error unmount %s", path)
+		}
+	}
+	return fmt.Errorf("Failed creating directory %s", path)
 }

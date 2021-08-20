@@ -260,7 +260,7 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
 
 	// Is it encrypted?
 	if result, err := isLuks(physdev); result == true {
-		logger.Debugf("Encrypted volume - using key file \"%s\"", d.config.EncryptionKey)
+		logger.Debugf("Encrypted volume - using key file '%s'", d.config.EncryptionKey)
 		// If yes, we must have a passphrase.
 		if d.config.EncryptionKey == "" {
 			logger.Errorf("Device %s is encrypted, and I have no pass to decrypt it.", physdev)
@@ -280,8 +280,8 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
 	}
 
 
-    //
-    // Check filesystem and format if needed
+	//
+	// Check filesystem and format if needed
 
 	fsType, err := getFilesystemType(dev)
 	if err != nil {
@@ -310,8 +310,10 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
 	// Mount device
 
 	path := filepath.Join(d.config.MountDir, r.Name)
-	if err = os.MkdirAll(path, 0700); err != nil {
-		logger.WithError(err).Error("Error creating mount directory")
+
+	err = createMountDir(path)
+	if err != nil {
+		logger.WithError(err).Errorf("Error creating mount directory %s", path)
 		return nil, err
 	}
 
