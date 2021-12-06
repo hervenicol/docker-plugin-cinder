@@ -237,7 +237,7 @@ func attachVolume(d *plugin, volumeName string) (string, error) {
 
 	if err != nil {
 		logger.WithError(err).Error("Expected block device not found")
-		return "", fmt.Errorf("Block device not found: %s", dev)
+		return "", fmt.Errorf("Block device not found: %s", devid)
 	}
 
 	return dev, nil
