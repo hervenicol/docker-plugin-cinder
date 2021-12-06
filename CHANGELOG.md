@@ -1,10 +1,16 @@
 # Changelog
 
+## v0.10.0
+
+* error handling at mount: umount/cleanup if mount fails
+
 ## v0.9.0
+
 * luks encryption support
 * fix (retry) mount error "mkdir - file exists"
 
 ## v0.8.0
+
 * fix did not umount when volume is broken
 
 ## v0.7.0
