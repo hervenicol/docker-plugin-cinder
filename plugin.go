@@ -259,7 +259,7 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
         fixUnmountRequest := &volume.UnmountRequest{Name: r.Name, ID: r.ID}
         unmountErr := d.Unmount(fixUnmountRequest)
         if unmountErr != nil {
-            logger.Error("Error unmounting: %s", err.Error())
+            logger.WithError(err).Errorf("Error unmounting: %s", unmountErr.Error())
         }
         time.Sleep(time.Duration(d.config.DelayDeviceWait) * time.Second)
 		return nil, err
@@ -275,7 +275,7 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
             fixUnmountRequest := &volume.UnmountRequest{Name: r.Name, ID: r.ID}
             unmountErr := d.Unmount(fixUnmountRequest)
             if unmountErr != nil {
-                logger.Error("Error unmounting: %s", err.Error())
+                logger.WithError(err).Errorf("Error unmounting: %s", unmountErr.Error())
             }
             time.Sleep(time.Duration(d.config.DelayDeviceWait) * time.Second)
 			return nil, err
@@ -288,7 +288,7 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
             fixUnmountRequest := &volume.UnmountRequest{Name: r.Name, ID: r.ID}
             unmountErr := d.Unmount(fixUnmountRequest)
             if unmountErr != nil {
-                logger.Error("Error unmounting: %s", err.Error())
+                logger.WithError(err).Errorf("Error unmounting: %s", unmountErr.Error())
             }
             time.Sleep(time.Duration(d.config.DelayDeviceWait) * time.Second)
 			return nil, err
@@ -311,7 +311,7 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
         fixUnmountRequest := &volume.UnmountRequest{Name: r.Name, ID: r.ID}
         unmountErr := d.Unmount(fixUnmountRequest)
         if unmountErr != nil {
-            logger.Error("Error unmounting: %s", err.Error())
+            logger.WithError(err).Errorf("Error unmounting: %s", unmountErr.Error())
         }
         time.Sleep(time.Duration(d.config.DelayDeviceWait) * time.Second)
 		return nil, err
@@ -334,7 +334,7 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
             fixUnmountRequest := &volume.UnmountRequest{Name: r.Name, ID: r.ID}
             unmountErr := d.Unmount(fixUnmountRequest)
             if unmountErr != nil {
-                logger.Error("Error unmounting: %s", err.Error())
+                logger.WithError(err).Errorf("Error unmounting: %s", unmountErr.Error())
             }
             time.Sleep(time.Duration(d.config.DelayDeviceWait) * time.Second)
 			return nil, err
@@ -353,7 +353,7 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
         fixUnmountRequest := &volume.UnmountRequest{Name: r.Name, ID: r.ID}
         unmountErr := d.Unmount(fixUnmountRequest)
         if unmountErr != nil {
-            logger.Error("Error unmounting: %s", err.Error())
+            logger.WithError(err).Errorf("Error unmounting: %s", unmountErr.Error())
         }
         time.Sleep(time.Duration(d.config.DelayDeviceWait) * time.Second)
 		return nil, err
@@ -367,7 +367,7 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
         fixUnmountRequest := &volume.UnmountRequest{Name: r.Name, ID: r.ID}
         unmountErr := d.Unmount(fixUnmountRequest)
         if unmountErr != nil {
-            logger.Error("Error unmounting: %s", err.Error())
+            logger.WithError(err).Errorf("Error unmounting: %s", unmountErr.Error())
         }
         time.Sleep(time.Duration(d.config.DelayDeviceWait) * time.Second)
 		return nil, errors.New(string(out))
@@ -389,7 +389,7 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
             fixUnmountRequest := &volume.UnmountRequest{Name: r.Name, ID: r.ID}
             unmountErr := d.Unmount(fixUnmountRequest)
             if unmountErr != nil {
-                logger.Error("Error unmounting: %s", err.Error())
+                logger.WithError(err).Errorf("Error unmounting: %s", unmountErr.Error())
             }
             time.Sleep(time.Duration(d.config.DelayDeviceWait) * time.Second)
 			return nil, err
@@ -400,7 +400,7 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
             fixUnmountRequest := &volume.UnmountRequest{Name: r.Name, ID: r.ID}
             unmountErr := d.Unmount(fixUnmountRequest)
             if unmountErr != nil {
-                logger.Error("Error unmounting: %s", err.Error())
+                logger.WithError(err).Errorf("Error unmounting: %s", unmountErr.Error())
             }
             time.Sleep(time.Duration(d.config.DelayDeviceWait) * time.Second)
 			return nil, err
