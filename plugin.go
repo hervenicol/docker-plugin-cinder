@@ -255,6 +255,13 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
 	physdev, err := attachVolume(&d, r.Name)
 	if err != nil {
 		logger.WithError(err).Errorf("Error attaching volume: %s", err.Error())
+        // cleanup: umount
+        fixUnmountRequest := &volume.UnmountRequest{Name: r.Name, ID: r.ID}
+        unmountErr := d.Unmount(fixUnmountRequest)
+        if unmountErr != nil {
+            logger.Error("Error unmounting: %s", err.Error())
+        }
+        time.Sleep(time.Duration(d.config.DelayDeviceWait) * time.Second)
 		return nil, err
 	}
 
@@ -264,12 +271,26 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
 		// If yes, we must have a passphrase.
 		if d.config.EncryptionKey == "" {
 			logger.Errorf("Device %s is encrypted, and I have no pass to decrypt it.", physdev)
+            // cleanup: umount
+            fixUnmountRequest := &volume.UnmountRequest{Name: r.Name, ID: r.ID}
+            unmountErr := d.Unmount(fixUnmountRequest)
+            if unmountErr != nil {
+                logger.Error("Error unmounting: %s", err.Error())
+            }
+            time.Sleep(time.Duration(d.config.DelayDeviceWait) * time.Second)
 			return nil, err
 		}
 		// luksOpen it, or quit with error.
 		luksName, err := luksOpen(physdev, d.config.EncryptionKey, r.Name)
 		if err != nil {
-			logger.WithError(err).Errorf("Opening LUKS device %s as %s with key %s failed", physdev, luksName, d.config.EncryptionKey)
+			logger.WithError(err).Errorf("Opening LUKS device %s with key %s failed", physdev, d.config.EncryptionKey)
+            // cleanup: umount
+            fixUnmountRequest := &volume.UnmountRequest{Name: r.Name, ID: r.ID}
+            unmountErr := d.Unmount(fixUnmountRequest)
+            if unmountErr != nil {
+                logger.Error("Error unmounting: %s", err.Error())
+            }
+            time.Sleep(time.Duration(d.config.DelayDeviceWait) * time.Second)
 			return nil, err
 		}
 		// Select dm device
@@ -286,6 +307,13 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
 	fsType, err := getFilesystemType(dev)
 	if err != nil {
 		logger.WithError(err).Error("Detecting filesystem type failed")
+        // cleanup: umount
+        fixUnmountRequest := &volume.UnmountRequest{Name: r.Name, ID: r.ID}
+        unmountErr := d.Unmount(fixUnmountRequest)
+        if unmountErr != nil {
+            logger.Error("Error unmounting: %s", err.Error())
+        }
+        time.Sleep(time.Duration(d.config.DelayDeviceWait) * time.Second)
 		return nil, err
 	}
 
@@ -302,6 +330,13 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
 				"error": err,
 				"filesystem": d.config.Filesystem,
 			}).Error("Formatting failed")
+            // cleanup: umount
+            fixUnmountRequest := &volume.UnmountRequest{Name: r.Name, ID: r.ID}
+            unmountErr := d.Unmount(fixUnmountRequest)
+            if unmountErr != nil {
+                logger.Error("Error unmounting: %s", err.Error())
+            }
+            time.Sleep(time.Duration(d.config.DelayDeviceWait) * time.Second)
 			return nil, err
 		}
 	}
@@ -314,6 +349,13 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
 	err = createMountDir(path)
 	if err != nil {
 		logger.WithError(err).Errorf("Error creating mount directory %s", path)
+        // cleanup: umount
+        fixUnmountRequest := &volume.UnmountRequest{Name: r.Name, ID: r.ID}
+        unmountErr := d.Unmount(fixUnmountRequest)
+        if unmountErr != nil {
+            logger.Error("Error unmounting: %s", err.Error())
+        }
+        time.Sleep(time.Duration(d.config.DelayDeviceWait) * time.Second)
 		return nil, err
 	}
 
@@ -321,6 +363,13 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
 	out, err := exec.Command("mount", dev, path).CombinedOutput()
 	if err != nil {
 		log.WithError(err).Errorf("%s", out)
+        // cleanup: umount
+        fixUnmountRequest := &volume.UnmountRequest{Name: r.Name, ID: r.ID}
+        unmountErr := d.Unmount(fixUnmountRequest)
+        if unmountErr != nil {
+            logger.Error("Error unmounting: %s", err.Error())
+        }
+        time.Sleep(time.Duration(d.config.DelayDeviceWait) * time.Second)
 		return nil, errors.New(string(out))
 	}
 
@@ -336,10 +385,24 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
 
 		if err = os.MkdirAll(path, os.FileMode(perm)); err != nil {
 			logger.WithError(err).Error("Error creating VolumeSubDir")
+            // cleanup: umount
+            fixUnmountRequest := &volume.UnmountRequest{Name: r.Name, ID: r.ID}
+            unmountErr := d.Unmount(fixUnmountRequest)
+            if unmountErr != nil {
+                logger.Error("Error unmounting: %s", err.Error())
+            }
+            time.Sleep(time.Duration(d.config.DelayDeviceWait) * time.Second)
 			return nil, err
 		}
 		if err = os.Chown(path, uid, gid); err != nil {
 			logger.WithError(err).Error("Error creating VolumeSubDir")
+            // cleanup: umount
+            fixUnmountRequest := &volume.UnmountRequest{Name: r.Name, ID: r.ID}
+            unmountErr := d.Unmount(fixUnmountRequest)
+            if unmountErr != nil {
+                logger.Error("Error unmounting: %s", err.Error())
+            }
+            time.Sleep(time.Duration(d.config.DelayDeviceWait) * time.Second)
 			return nil, err
 		}
 	}
