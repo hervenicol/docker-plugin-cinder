@@ -1,5 +1,9 @@
 # Changelog
 
+## next version
+
+* Update dependencies for security fixes
+
 ## v0.10.0
 
 * error handling at mount: umount/cleanup if mount fails
