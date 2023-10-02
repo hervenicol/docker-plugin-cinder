@@ -10,7 +10,6 @@ import (
 	"strings"
 	"strconv"
 	"sync"
-	"syscall"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -105,8 +104,15 @@ func (d plugin) Create(r *volume.CreateRequest) error {
 	logger.Infof("Creating volume '%s' ...", r.Name)
 	logger.Debugf("Create: %+v", r)
 
+	// -- Mutex
+	logger.Debug("[Create] Locking mutex...")
 	d.mutex.Lock()
+	logger.Debug("[Create] Mutex locked")
+
+	defer logger.Debug("[Create] Mutex unlocked")
 	defer d.mutex.Unlock()
+	defer logger.Debug("[Create] Unlocking mutex...") // Defers are executed in LIFO order
+	// -- / Mutex
 
 	// DEFAULT SIZE IN GB
 	var size = d.config.DefaultSize
@@ -247,22 +253,42 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
 	logger.Infof("Mounting volume '%s' ...", r.Name)
 	logger.Debugf("Mount: %+v", r)
 
+	// -- Mutex
+	logger.Debug("[Mount] Locking mutex...")
 	d.mutex.Lock()
+	logger.Debug("[Mount] Mutex locked")
+
+	defer logger.Debug("[Mount] Mutex unlocked")
 	defer d.mutex.Unlock()
+	defer logger.Debug("[Mount] Unlocking mutex...") // Defers are executed in LIFO order
+	// -- / Mutex
 
 	var dev = ""
 
 	physdev, err := attachVolume(&d, r.Name)
 	if err != nil {
 		logger.WithError(err).Errorf("Error attaching volume: %s", err.Error())
-        // cleanup: umount
-        fixUnmountRequest := &volume.UnmountRequest{Name: r.Name, ID: r.ID}
-        unmountErr := d.Unmount(fixUnmountRequest)
+        // cleanup: unmount
+        unmountErr := unmountVolume(&d, r.Name, "mount")
         if unmountErr != nil {
             logger.WithError(err).Errorf("Error unmounting: %s", unmountErr.Error())
         }
         time.Sleep(time.Duration(d.config.DelayDeviceWait) * time.Second)
 		return nil, err
+	}
+
+	// Wait for volume to be attached
+	vol, err := d.getByName(r.Name)
+	if err != nil {
+		logger.WithError(err).Errorf("Error retrieving volume: %s", err.Error())
+		return nil, err
+	}
+	if vol.Status == "attaching" {
+		logger.Infof("Volume is in '%s' state, wait for 'in-use'...", vol.Status)
+		if vol, err = d.waitOnVolumeState(logger.Context, vol, "in-use"); err != nil {
+			logger.Error(err.Error())
+			return nil, err
+		}
 	}
 
 	// Is it encrypted?
@@ -271,9 +297,8 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
 		// If yes, we must have a passphrase.
 		if d.config.EncryptionKey == "" {
 			logger.Errorf("Device %s is encrypted, and I have no pass to decrypt it.", physdev)
-            // cleanup: umount
-            fixUnmountRequest := &volume.UnmountRequest{Name: r.Name, ID: r.ID}
-            unmountErr := d.Unmount(fixUnmountRequest)
+            // cleanup: unmount
+            unmountErr := unmountVolume(&d, r.Name, "mount")
             if unmountErr != nil {
                 logger.WithError(err).Errorf("Error unmounting: %s", unmountErr.Error())
             }
@@ -284,9 +309,8 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
 		luksName, err := luksOpen(physdev, d.config.EncryptionKey, r.Name)
 		if err != nil {
 			logger.WithError(err).Errorf("Opening LUKS device %s with key %s failed", physdev, d.config.EncryptionKey)
-            // cleanup: umount
-            fixUnmountRequest := &volume.UnmountRequest{Name: r.Name, ID: r.ID}
-            unmountErr := d.Unmount(fixUnmountRequest)
+            // cleanup: unmount
+            unmountErr := unmountVolume(&d, r.Name, "mount")
             if unmountErr != nil {
                 logger.WithError(err).Errorf("Error unmounting: %s", unmountErr.Error())
             }
@@ -307,9 +331,8 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
 	fsType, err := getFilesystemType(dev)
 	if err != nil {
 		logger.WithError(err).Error("Detecting filesystem type failed")
-        // cleanup: umount
-        fixUnmountRequest := &volume.UnmountRequest{Name: r.Name, ID: r.ID}
-        unmountErr := d.Unmount(fixUnmountRequest)
+        // cleanup: unmount
+        unmountErr := unmountVolume(&d, r.Name, "mount")
         if unmountErr != nil {
             logger.WithError(err).Errorf("Error unmounting: %s", unmountErr.Error())
         }
@@ -330,9 +353,8 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
 				"error": err,
 				"filesystem": d.config.Filesystem,
 			}).Error("Formatting failed")
-            // cleanup: umount
-            fixUnmountRequest := &volume.UnmountRequest{Name: r.Name, ID: r.ID}
-            unmountErr := d.Unmount(fixUnmountRequest)
+            // cleanup: unmount
+            unmountErr := unmountVolume(&d, r.Name, "mount")
             if unmountErr != nil {
                 logger.WithError(err).Errorf("Error unmounting: %s", unmountErr.Error())
             }
@@ -349,9 +371,8 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
 	err = createMountDir(path)
 	if err != nil {
 		logger.WithError(err).Errorf("Error creating mount directory %s", path)
-        // cleanup: umount
-        fixUnmountRequest := &volume.UnmountRequest{Name: r.Name, ID: r.ID}
-        unmountErr := d.Unmount(fixUnmountRequest)
+        // cleanup: unmount
+        unmountErr := unmountVolume(&d, r.Name, "mount")
         if unmountErr != nil {
             logger.WithError(err).Errorf("Error unmounting: %s", unmountErr.Error())
         }
@@ -362,10 +383,9 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
 	logger.WithField("mount", path).Debug("Mounting volume...")
 	out, err := exec.Command("mount", dev, path).CombinedOutput()
 	if err != nil {
-		log.WithError(err).Errorf("%s", out)
-        // cleanup: umount
-        fixUnmountRequest := &volume.UnmountRequest{Name: r.Name, ID: r.ID}
-        unmountErr := d.Unmount(fixUnmountRequest)
+		log.WithError(err).Errorf("Error executing mount command: %s", out)
+        // cleanup: unmount
+        unmountErr := unmountVolume(&d, r.Name, "mount")
         if unmountErr != nil {
             logger.WithError(err).Errorf("Error unmounting: %s", unmountErr.Error())
         }
@@ -385,9 +405,8 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
 
 		if err = os.MkdirAll(path, os.FileMode(perm)); err != nil {
 			logger.WithError(err).Error("Error creating VolumeSubDir")
-            // cleanup: umount
-            fixUnmountRequest := &volume.UnmountRequest{Name: r.Name, ID: r.ID}
-            unmountErr := d.Unmount(fixUnmountRequest)
+            // cleanup: unmount
+            unmountErr := unmountVolume(&d, r.Name, "mount")
             if unmountErr != nil {
                 logger.WithError(err).Errorf("Error unmounting: %s", unmountErr.Error())
             }
@@ -396,9 +415,8 @@ func (d plugin) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
 		}
 		if err = os.Chown(path, uid, gid); err != nil {
 			logger.WithError(err).Error("Error creating VolumeSubDir")
-            // cleanup: umount
-            fixUnmountRequest := &volume.UnmountRequest{Name: r.Name, ID: r.ID}
-            unmountErr := d.Unmount(fixUnmountRequest)
+            // cleanup: unmount
+            unmountErr := unmountVolume(&d, r.Name, "mount")
             if unmountErr != nil {
                 logger.WithError(err).Errorf("Error unmounting: %s", unmountErr.Error())
             }
@@ -435,7 +453,7 @@ func (d plugin) Remove(r *volume.RemoveRequest) error {
 	vol, err := d.getByName(r.Name)
 
 	if err != nil {
-		logger.WithError(err).Errorf("Error retriving volume: %s", err.Error())
+		logger.WithError(err).Errorf("Error retrieving volume: %s", err.Error())
 		return err
 	}
 
@@ -467,50 +485,17 @@ func (d plugin) Unmount(r *volume.UnmountRequest) error {
 	logger.Infof("Unmounting volume '%s' ...", r.Name)
 	logger.Debugf("Unmount: %+v", r)
 
+	// -- Mutex
+	logger.Debug("[Unmount] Locking mutex...")
 	d.mutex.Lock()
+	logger.Debug("[Unmount] Mutex locked")
+
+	defer logger.Debug("[Unmount] Mutex unlocked")
 	defer d.mutex.Unlock()
+	defer logger.Debug("[Unmount] Unlocking mutex...") // Defers are executed in LIFO order
+	// -- / Mutex
 
-	path := filepath.Join(d.config.MountDir, r.Name)
-
-	// find device behind volume and luks volume name (in case it is a luks encrypted volume)
-	_, luksName, baseDevice, err := getLuksInfo(path)
-
-	exists, err := isDirectoryPresent(path)
-	if err != nil {
-		logger.WithError(err).Errorf("Error checking directory stat: %s", path)
-	}
-
-	// error with "stats" usually means it exists but we can't reach it
-	// that means mounted but broken. So we must unmount it.
-	if exists || (err != nil) {
-		err = syscall.Unmount(path, 0)
-		if err != nil {
-			logger.WithError(err).Errorf("Error unmount %s", path)
-		}
-	}
-
-	// Now the volume is unmounted, we close the luks volume (if it is one):
-	if baseDevice != "" {
-		if result, _ := isLuks(baseDevice); result == true {
-			logger.Debugf("Closing LUKS device %s", luksName)
-			luksCloseOutput, err := exec.Command("cryptsetup", "luksClose", luksName).CombinedOutput()
-			if err != nil {
-				logger.WithError(err).Errorf("Error closing LUKS volume - %s", luksCloseOutput)
-			}
-		}
-	}
-
-	vol, err := d.getByName(r.Name)
-	if err != nil {
-		logger.WithError(err).Error("Error retrieving volume")
-	} else {
-		_, err = d.detachVolume(logger.Context, vol)
-		if err != nil {
-			logger.WithError(err).Error("Error detaching volume")
-		}
-	}
-
-	return nil
+	return unmountVolume(&d, r.Name, "unmount")
 }
 
 func (d plugin) getByName(name string) (*volumes.Volume, error) {

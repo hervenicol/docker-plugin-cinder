@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 	"bufio"
@@ -324,4 +325,50 @@ func createMountDir(path string) (error) {
 		}
 	}
 	return fmt.Errorf("Failed creating directory %s", path)
+}
+
+func unmountVolume(d *plugin, volumeName string, mainAction string) (error) {
+	logger := log.WithFields(log.Fields{"name": volumeName, "action": mainAction, "utilAction": "unmountVolume"})
+
+	path := filepath.Join(d.config.MountDir, volumeName)
+
+	// find device behind volume and luks volume name (in case it is a luks encrypted volume)
+	_, luksName, baseDevice, err := getLuksInfo(path)
+
+	exists, err := isDirectoryPresent(path)
+	if err != nil {
+		logger.WithError(err).Errorf("Error checking directory stat: %s", path)
+	}
+
+	// error with "stats" usually means it exists but we can't reach it
+	// that means mounted but broken. So we must unmount it.
+	if exists || (err != nil) {
+		err = syscall.Unmount(path, 0)
+		if err != nil {
+			logger.WithError(err).Errorf("Error unmount %s", path)
+		}
+	}
+
+	// Now the volume is unmounted, we close the luks volume (if it is one):
+	if baseDevice != "" {
+		if result, _ := isLuks(baseDevice); result == true {
+			logger.Debugf("Closing LUKS device %s", luksName)
+			luksCloseOutput, err := exec.Command("cryptsetup", "luksClose", luksName).CombinedOutput()
+			if err != nil {
+				logger.WithError(err).Errorf("Error closing LUKS volume - %s", luksCloseOutput)
+			}
+		}
+	}
+
+	vol, err := d.getByName(volumeName)
+	if err != nil {
+		logger.WithError(err).Error("Error retrieving volume")
+	} else {
+		_, err = d.detachVolume(logger.Context, vol)
+		if err != nil {
+			logger.WithError(err).Error("Error detaching volume")
+		}
+	}
+
+	return nil
 }
